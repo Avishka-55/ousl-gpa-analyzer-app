@@ -1,50 +1,111 @@
-# Welcome to your Expo app 👋
+# OUSL GPA Analyzer App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Mobile GPA analysis app built with Expo + React Native for OUSL students.
 
-## Get started
+The app lets users upload a result sheet export, calculate GPA/class standing, run what-if grade projections, and estimate required grades for a target class.
+
+## Features
+
+- Degree mode selector: BSc General and BSc Honours
+- Result sheet upload and parsing from myOUSL-style HTML table exports
+- Course exclusion list (custom comma-separated course codes)
+- Current GPA and degree class summary
+- Included vs skipped course breakdown
+- What-if projection for incomplete courses
+- Target class calculator (First, Upper, Lower, Pass)
+
+## Important File Format Note
+
+The parser expects HTML table content.
+
+- Supported: HTML result export (`.html`) from myOUSL
+- Sometimes supported: `.xls` files that actually contain HTML
+- Not supported directly: true binary Excel workbooks (`.xls` / `.xlsx`)
+
+If you upload a binary Excel workbook, the app will show a clear validation error.
+
+## Tech Stack
+
+- Expo SDK 54
+- React Native 0.81
+- Expo Router
+- TypeScript
+
+## Local Development
 
 1. Install dependencies
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+2. Start dev server
 
-## Learn more
+```bash
+npm run start
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+3. Run on specific platforms
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+npm run android
+npm run ios
+npm run web
+```
 
-## Join the community
+4. Lint
 
-Join our community of developers creating universal apps.
+```bash
+npm run lint
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Running From GitHub Codespaces
+
+If `--tunnel` is unstable, use LAN/web during development:
+
+```bash
+npm run start
+# or
+npm run web
+```
+
+If tunnel works in your environment:
+
+```bash
+npx expo start --tunnel --clear
+```
+
+## Build APK With EAS
+
+Project is already configured with EAS (`eas.json`).
+
+1. Login
+
+```bash
+npx eas login
+```
+
+2. Build preview APK
+
+```bash
+npx eas-cli@latest build --platform android --profile preview
+```
+
+3. Build production artifact
+
+```bash
+npx eas-cli@latest build --platform android --profile production
+```
+
+After the build completes, open the Expo build URL and download/install the APK (or AAB for store flow).
+
+## Project Structure
+
+- `app/(tabs)/index.tsx`: main analyzer screen
+- `app/(tabs)/explore.tsx`: about/help screen
+- `components/gpa/*`: modular UI blocks
+- `features/gpa/*`: parser, constants, types, and calculation logic
+
+## Disclaimer
+
+This app is for academic planning and self-checking. Always confirm final degree classification with official OUSL records and faculty regulations.
