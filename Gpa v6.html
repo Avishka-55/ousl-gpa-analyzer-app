@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>OUSL GPA Analyzer v5 - The Flex Edition</title>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet"/>
+<!-- Keeping html2pdf included (you can remove it), but we will NOT use it on Firefox local -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<style>
+:root {
+  --maroon:#8B1A1A; --maroon-dark:#5C1111; --maroon-pale:#FFF5F5;
+  --gold:#B8860B; --gold-pale:#FFFBF0;
+  --bg-color:#F8F9FA; --card-bg:#FFFFFF;
+  --border:#E2E8F0; --border-light:#EDF2F7;
+  --text:#1A202C; --muted:#718096; --muted2:#A0AEC0;
+  --brown:#7B3F00; --navy:#2B6CB0; --green:#38A169; --red:#E53E3E;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 20px rgba(0,0,0,0.06);
+  --radius: 12px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg-color);
+  font-family:'Inter', system-ui, -apple-system, sans-serif;
+  color:var(--text);
+  min-height:100vh;
+  padding-bottom:100px;
+  line-height: 1.6;
+}
+
+/* ── Header ── */
+header{
+  background:var(--maroon);
+  border-bottom:4px solid var(--maroon-dark);
+  padding:20px 40px;
+  display:flex;
+  align-items:center;
+  gap:18px;
+  position:sticky;
+  top:0;
+  z-index:100;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.crest{width:50px;height:50px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;box-shadow:0 0 0 3px rgba(255,255,255,0.2);}
+header h1{color:#fff;font-family:'EB Garamond', serif;font-size:24px;font-weight:600;letter-spacing:.5px;line-height:1.2;}
+header p{color:rgba(255,255,255,.8);font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-top:2px;font-weight:500;}
+.version-tag{margin-left:auto;background:var(--gold);color:#fff;font-size:11px;font-weight:600;letter-spacing:1px;padding:4px 12px;border-radius:20px;}
+
+/* 🔥 MOBILE HEADER TWEAKS 🔥 */
+@media(max-width: 600px) {
+  header { padding: 12px 20px; gap: 12px; }
+  .crest { width: 38px; height: 38px; font-size: 18px; box-shadow: 0 0 0 2px rgba(255,255,255,0.2); }
+  header h1 { font-size: 18px; }
+  header p { font-size: 9px; letter-spacing: 1px; }
+  .version-tag { font-size: 10px; padding: 3px 8px; }
+}
+
+/* ── Layout ── */
+.body{max-width:860px;margin:0 auto;padding:40px 20px 0;}
+@media(max-width: 600px) { .body { padding-top: 24px; } }
+
+/* ── Card ── */
+.card{
+  background:var(--card-bg);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:40px;
+  margin-bottom:32px;
+  box-shadow:var(--shadow-md);
+  animation:fadeUp .4s ease-out both;
+}
+@media(max-width: 600px) { .card { padding: 24px; } }
+@keyframes fadeUp{from{opacity:0;transform:translateY(15px);}to{opacity:1;transform:translateY(0);}}
+
+.section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.step-number { background: var(--maroon-pale); color: var(--maroon); font-weight: 700; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 14px; flex-shrink: 0;}
+.section-title{font-size:20px;font-weight:700;color:var(--text);letter-spacing:-0.5px;}
+.card-desc{font-size:14px;color:var(--muted);margin-bottom:24px;}
+.divider { height: 1px; background: var(--border); margin: 40px 0; }
+.sub-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+
+/* ── UI Elements ── */
+.degree-toggle{display:flex;gap:12px;margin-bottom:12px; flex-wrap: wrap;}
+.deg-btn{flex:1; min-width: 250px; padding:16px; text-align:left; cursor:pointer; background:var(--bg-color); border:2px solid var(--border); border-radius:8px; transition:all .2s;}
+.deg-btn:hover { border-color: var(--muted2); }
+.deg-btn.active{background:var(--maroon-pale); border-color:var(--maroon);}
+.deg-btn .deg-title{font-size:16px;font-weight:600;display:block;color:var(--text); margin-bottom: 4px;}
+.deg-btn.active .deg-title { color: var(--maroon); }
+.deg-btn .deg-sub{font-size:12px;color:var(--muted);display:block;}
+
+#dropzone{border:2px dashed var(--border);border-radius:8px;padding:40px 20px;text-align:center;cursor:pointer;background:var(--bg-color);transition:all .2s;}
+#dropzone:hover,#dropzone.dragover{border-color:var(--maroon);background:var(--maroon-pale);}
+#dropzone .dz-icon{font-size:40px;margin-bottom:12px;}
+#dropzone .dz-label{font-size:16px;font-weight:500;color:var(--text);}
+#dropzone .dz-hint{font-size:13px;color:var(--muted);margin-top:8px;}
+#file-status{margin-top:16px;font-size:14px;font-weight:500;text-align:center;}
+.ok{color:var(--green); background:#E6FFFA; padding:8px 16px; border-radius:20px; display:inline-block;}
+.err{color:var(--red); background:#FFF5F5; padding:8px 16px; border-radius:20px; display:inline-block;}
+
+input[type=text],select{width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:6px;font-size:14px;font-family:'Courier Prime',monospace;background:var(--bg-color);color:var(--text);outline:none;transition:all .2s;}
+input[type=text]:focus,select:focus{border-color:var(--maroon);box-shadow:0 0 0 3px var(--maroon-pale);}
+select{font-family:'Inter',sans-serif;font-size:14px;cursor:pointer;}
+label.field-label{font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:8px;}
+
+/* ── Buttons ── */
+.btn{background:var(--maroon);color:#fff;border:none;padding:14px 32px;font-size:14px;font-weight:600;cursor:pointer;border-radius:6px;transition:all .2s;display:inline-block; width: 100%; text-align: center;}
+@media(min-width: 600px) { .btn { width: auto; } }
+.btn:hover{background:var(--maroon-dark); transform: translateY(-1px); box-shadow: var(--shadow-sm);}
+.btn:active{transform:translateY(1px);}
+.btn-center{text-align:center;margin-top:24px;}
+.btn-outline{background:transparent;color:var(--maroon);border:2px solid var(--maroon);}
+.btn-outline:hover{background:var(--maroon-pale);}
+.btn-pdf{background:#2B6CB0; margin-top: 32px; display: flex; align-items: center; justify-content: center; gap: 10px; margin-left: auto; margin-right: auto;}
+.btn-pdf:hover{background:#2C5282;}
+
+/* ── Master Report Styles ── */
+.gpa-hero{text-align:center;padding:10px 0 30px;}
+.gpa-number{font-size:100px;font-weight:700;line-height:1;letter-spacing:-4px;font-family:'EB Garamond',serif;}
+.gpa-label{font-size:14px;color:var(--muted);margin-top:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;}
+.degree-badge{display:inline-block;padding:8px 24px;border-radius:30px;font-size:13px;letter-spacing:1px;text-transform:uppercase;margin-top:20px;font-weight:700;}
+
+.stat-row{display:flex;gap:16px;margin-bottom:40px;flex-wrap:wrap;}
+.stat{flex:1;min-width:120px;background:var(--bg-color);border:1px solid var(--border);border-radius:8px;padding:20px 16px;text-align:center;}
+.stat-val{font-size:28px;font-weight:700;color:var(--text);font-family:'EB Garamond',serif;}
+.stat-lbl{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-top:8px;}
+.stat.warn .stat-val{color:var(--brown);}
+.stat.good .stat-val{color:var(--green);}
+
+.prog-wrap{margin-bottom:20px;}
+.prog-header{display:flex;justify-content:space-between;margin-bottom:8px;align-items:flex-end;}
+.prog-label{font-size:14px;font-weight:500;}
+.prog-val{font-size:13px;font-weight:600;color:var(--muted);}
+.prog-track{background:var(--border-light);border-radius:10px;height:10px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:10px;width:0;transition:width 1.2s cubic-bezier(.4,0,.2,1);}
+
+.cls-row{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;margin-bottom:10px;border-radius:8px;border:1px solid var(--border-light);transition:all .3s;}
+.cls-row.active{border-color:transparent;transform:scale(1.02);box-shadow:var(--shadow-sm);}
+.cls-name{font-size:15px;font-weight:600;}
+.cls-reqs{font-size:13px;color:var(--muted);margin-top:4px;}
+.cls-min{font-size:15px;font-weight:600;color:var(--muted);text-align:right;flex-shrink:0;margin-left:16px;}
+
+.criteria-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;}
+@media(max-width:600px){.criteria-grid{grid-template-columns:1fr;}}
+.crit-item{display:flex;align-items:flex-start;gap:14px;padding:16px;border-radius:8px;border:1px solid var(--border);background:var(--bg-color);}
+.crit-icon{font-size:22px;flex-shrink:0;margin-top:-2px;}
+.crit-text{font-size:14px;line-height:1.5;}
+.crit-title{font-weight:600;display:block;margin-bottom:4px;}
+.crit-detail{color:var(--muted);font-size:13px;}
+.crit-item.pass{border-color:#C6F6D5;background:#F0FFF4;}
+.crit-item.fail{border-color:#FED7D7;background:#FFF5F5;}
+.crit-item.pending{border-color:#FEEBC8;background:#FFFAF0;}
+
+/* ── What-if section ── */
+.whatif-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(250px, 1fr));gap:16px;margin-bottom:12px;}
+.whatif-course{background:var(--bg-color);border:1px solid var(--border);border-radius:8px;padding:16px;}
+.whatif-code{font-family:'Courier Prime',monospace;font-size:13px;font-weight:700;color:var(--maroon);margin-bottom:6px;}
+.whatif-name{font-size:14px;font-weight:500;margin-bottom:16px;line-height:1.4;}
+.whatif-select{font-size:14px;padding:10px 12px; border-width: 2px;}
+
+.whatif-result-card{background:linear-gradient(135deg, var(--maroon-pale), var(--gold-pale));border:1px solid var(--border);border-radius:12px;padding:32px;text-align:center;margin-top:24px;}
+.whatif-gpa{font-size:64px;font-weight:700;color:var(--maroon);letter-spacing:-2px;line-height:1;font-family:'EB Garamond',serif;}
+.whatif-label{font-size:13px;font-weight:600;color:var(--maroon);letter-spacing:1px;text-transform:uppercase;margin-top:12px;}
+.whatif-delta{font-size:15px;font-weight:600;margin-top:16px; display:inline-block; padding: 6px 16px; border-radius: 20px; background: rgba(255,255,255,0.6);}
+
+/* ── Tables & Collapsing ── */
+.table-wrap{overflow-x:auto; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px;}
+table{width:100%;border-collapse:collapse;font-size:14px;background:var(--card-bg);}
+thead tr th{background:var(--bg-color);color:var(--muted);padding:14px 16px;text-align:left;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--border);}
+tbody tr:nth-child(even){background: #FAFBFC;}
+tbody tr:hover{background:var(--maroon-pale);}
+td{padding:14px 16px;border-bottom:1px solid var(--border-light);vertical-align:middle;}
+td.code{font-family:'Courier Prime',monospace;font-size:13px;font-weight:700;}
+td.center{text-align:center;}
+td.mono{font-family:'Courier Prime',monospace;font-weight:700;}
+td.muted{color:var(--muted);font-style:italic;font-size:13px;}
+.grade-chip{display:inline-block;padding:4px 12px;border-radius:6px;font-weight:700;font-size:12px;}
+
+/* 🔥 COLLAPSE UI CSS 🔥 */
+.collapsed-item { display: none !important; }
+.toggle-view-btn { background: var(--border-light); color: var(--text); border: none; padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; width: 100%; text-align: center; transition: all 0.2s; margin-bottom: 24px;}
+.toggle-view-btn:hover { background: var(--border); }
+
+/* ── Info box ── */
+.info-box{background:var(--gold-pale);border:1px solid #F6E05E;border-radius:8px;padding:16px 20px;font-size:14px;color:#744210;margin-bottom:24px;line-height:1.6;}
+
+.footer-note{text-align:center;font-size:12px;color:var(--muted);margin-top:40px;margin-bottom:20px;}
+.flow-hidden { display: none; }
+
+/* =========================
+   PRINT / PDF (Firefox-safe)
+   ========================= */
+@media print {
+  @page { size: A4; margin: 12mm; }
+  body { background: #fff !important; padding-bottom: 0 !important; }
+
+  header,
+  #card-setup,
+  #card-whatif,
+  .footer-note,
+  #pdf-btn,
+  .toggle-view-btn {
+    display: none !important;
+  }
+
+  .body { max-width: none !important; padding: 0 !important; margin: 0 !important; }
+  .card { box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; }
+
+  /* Avoid weird table splits */
+  table, tr, td, th { page-break-inside: avoid !important; }
+  .divider { page-break-after: avoid !important; }
+
+  /* Ensure colors print (Firefox setting may still control) */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="crest">🎓</div>
+  <div>
+    <h1>OUSL GPA Analyzer</h1>
+    <p>Faculty of Natural Sciences  ·  Academic Performance Report</p>
+  </div>
+</header>
+
+<div class="body">
+
+  <div class="card" id="card-setup">
+    <div class="section-header">
+      <div class="step-number">1</div>
+      <div class="section-title">Setup & Upload</div>
+    </div>
+    <p class="card-desc">Select your programme and drop your result sheet export.</p>
+
+    <div class="degree-toggle">
+      <div class="deg-btn active" id="btn-general" onclick="selectDegree('general')">
+        <span class="deg-title">BSc General Degree</span>
+        <span class="deg-sub">S1 Structure · 90 Credits</span>
+      </div>
+      <div class="deg-btn" id="btn-honours" onclick="selectDegree('honours')">
+        <span class="deg-title">BSc Honours Degree</span>
+        <span class="deg-sub">SS Structure · 120 Credits</span>
+      </div>
+    </div>
+
+    <div id="dropzone" style="margin-top: 24px;">
+      <div class="dz-icon">📄</div>
+      <div class="dz-label" id="drop-label">Tap to upload or drag & drop .xls/.html here</div>
+      <div class="dz-hint">Exports straight from the myOUSL portal</div>
+    </div>
+    <input type="file" id="file-input" accept=".xls,.html,.htm" style="display:none"/>
+    <div id="file-status"></div>
+
+    <div class="divider flow-hidden" id="div-exclude"></div>
+
+    <div class="flow-hidden" id="wrap-exclude">
+      <label class="field-label" for="exclude-input">Exclude these non-GPA courses (Comma separated)</label>
+      <input type="text" id="exclude-input" value="LTE3401, FDE3020, CYE3200, CSE3213, FNE3000"/>
+      <p style="font-size: 13px; color: var(--muted); margin-top: 8px;">Pre-filled with your custom exclusions.</p>
+
+      <div class="btn-center">
+        <button class="btn" onclick="calculateBase()">Analyze My Results ↓</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="pdf-export-area">
+    <div class="card flow-hidden" id="card-report">
+      <div class="section-header" style="justify-content: center; margin-bottom: 24px;">
+        <div class="section-title" id="summary-title" style="font-size: 24px;">Current GPA Report</div>
+      </div>
+
+      <div class="gpa-hero">
+        <div class="gpa-number" id="gpa-number">0.00</div>
+        <div class="gpa-label">Current Grade Point Average</div>
+        <div class="degree-badge" id="degree-badge">—</div>
+      </div>
+      <div class="stat-row" id="stat-row"></div>
+
+      <div class="divider"></div>
+
+      <div class="sub-title">Degree Classification Path</div>
+      <div id="cls-scale" style="margin-bottom: 32px;"></div>
+
+      <div class="sub-title">Credit Progress by Level</div>
+      <div id="credit-progress" style="margin-bottom: 32px;"></div>
+
+      <div class="sub-title">GPA by Level</div>
+      <div id="level-bars" style="margin-bottom: 32px;"></div>
+
+      <div class="divider"></div>
+
+      <div class="sub-title">Degree Requirements Breakdown</div>
+      <div id="criteria-content" style="margin-bottom: 10px;"></div>
+
+      <div class="divider"></div>
+
+      <div class="sub-title" id="inc-title">Included Courses</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Code</th><th>Course Name</th><th>Lvl</th><th>Grade</th><th>Cr</th><th>GPV</th><th>Wt.</th></tr></thead>
+          <tbody id="inc-tbody"></tbody>
+        </table>
+      </div>
+      <div id="inc-toggle-area"></div>
+
+      <div id="skip-section">
+        <div class="sub-title" id="skip-title" style="margin-top: 32px;">Skipped Courses</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Code</th><th>Course Name</th><th>Grade</th><th>Reason</th></tr></thead>
+            <tbody id="skip-tbody"></tbody>
+          </table>
+        </div>
+        <div id="skip-toggle-area"></div>
+      </div>
+
+      <button class="btn btn-pdf" id="pdf-btn" onclick="exportPDF()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Download Report as PDF
+      </button>
+
+    </div>
+  </div>
+
+  <div class="card flow-hidden" id="card-whatif">
+    <div class="section-header">
+      <div class="step-number" style="background:var(--gold-pale);color:var(--gold);">?</div>
+      <div class="section-title">Future Projections & Targets</div>
+    </div>
+
+    <p class="card-desc">Your incomplete courses have been skipped above. Assign hypothetical grades here to see your *Projected Final GPA*.</p>
+
+    <div id="incomplete-list"></div>
+    <div id="whatif-toggle-area"></div>
+
+    <div id="whatif-result-area" class="flow-hidden">
+      <div class="whatif-result-card">
+        <div class="whatif-label">Projected Final GPA</div>
+        <div class="whatif-gpa" id="proj-gpa-number">0.00</div>
+        <div><span class="degree-badge" id="proj-badge" style="margin-top: 12px;">—</span></div>
+        <div class="whatif-delta" id="proj-delta"></div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="sub-title">Target Class Calculator</div>
+    <p class="card-desc">Select the degree class you want, and we'll tell you the exact average grade you need across your remaining courses.</p>
+
+    <div style="display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap; margin-bottom:20px;">
+      <div style="flex:1; min-width:200px;">
+        <label class="field-label">Desired Degree Class</label>
+        <select id="target-class">
+          <option value="3.70">First Class (GPA ≥ 3.70)</option>
+          <option value="3.30">Second Class Upper (GPA ≥ 3.30)</option>
+          <option value="3.00">Second Class Lower (GPA ≥ 3.00)</option>
+          <option value="2.00">Pass (GPA ≥ 2.00)</option>
+        </select>
+      </div>
+      <button class="btn btn-outline" style="padding: 12px 24px; color: var(--text); border-color: var(--border);" onclick="calcTarget()">Calculate Needed Grade</button>
+    </div>
+    <div id="target-result"></div>
+  </div>
+
+  <p class="footer-note">Based on OUSL Guidebook 2025/2026 · Faculty of Natural Sciences · For reference only — verify with your faculty</p>
+</div>
+
+<script>
+// DATA
+const GPV = {'A+':4,'A':4,'A-':3.7,'B+':3.3,'B':3,'B-':2.7,'C+':2.3,'C':2,'C-':1.7,'D+':1.3,'D':1,'E':0};
+const GRADE_ORDER = ['A+','A','A-','B+','B','B-','C+','C','C-','D+','D','E'];
+
+const DEGREE_CLASSES = [
+  {label:'First Class',          color:'#8B1A1A', bg:'#FFF5F5', minGPA:3.70},
+  {label:'Second Class Upper',   color:'#D69E2E', bg:'#FFFFF0', minGPA:3.30},
+  {label:'Second Class Lower',   color:'#2B6CB0', bg:'#EBF8FF', minGPA:3.00},
+  {label:'Pass',                 color:'#38A169', bg:'#F0FFF4', minGPA:2.00},
+  {label:'Fail',                 color:'#718096', bg:'#F7FAFC', minGPA:0},
+];
+
+const CRITERIA = {
+  general: {
+    totalCredits: 90, levelCredits: {3:30, 4:30, 5:30},
+    classes: [
+      {label:'First Class', minGPA:3.70, gradeReq:{grade:'A', credits:45}, extraLabel:'A grades in 45 credits'},
+      {label:'Second Class Upper', minGPA:3.30, gradeReq:{grade:'B+', credits:45}, extraLabel:'B+ grades in 45 credits'},
+      {label:'Second Class Lower', minGPA:3.00, gradeReq:{grade:'B', credits:45}, extraLabel:'B grades in 45 credits'},
+      {label:'Pass', minGPA:2.00, gradeReq:null, extraLabel:'C grades or better in 84 credits'},
+    ]
+  },
+  honours: {
+    totalCredits: 120, levelCredits: {3:30, 4:30, 5:30, 6:30}, weighted: true,
+    classes: [
+      {label:'First Class', minGPA:3.70, gradeReq:{grade:'A', credits:60, l56credits:39}, extraLabel:'A grades in 60cr (39 from L5/L6)'},
+      {label:'Second Class Upper', minGPA:3.30, gradeReq:{grade:'B+', credits:60, l56credits:39}, extraLabel:'B+ grades in 60cr (39 from L5/L6)'},
+      {label:'Second Class Lower', minGPA:3.00, gradeReq:{grade:'B', credits:60, l56credits:39}, extraLabel:'B grades in 60cr (39 from L5/L6)'},
+      {label:'Pass', minGPA:2.00, gradeReq:null, extraLabel:'C grades or above for 120 credits'},
+    ]
+  }
+};
+
+let state = { degreeType: 'general', allCourses: [], baseData: null };
+const RENDER_LIMIT = 5; // How many items to show before collapsing
+
+function selectDegree(type) {
+  state.degreeType = type;
+  document.getElementById('btn-general').classList.toggle('active', type==='general');
+  document.getElementById('btn-honours').classList.toggle('active', type==='honours');
+  if(state.allCourses.length) calculateBase();
+}
+
+// FILE HANDLING
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('file-input');
+dropzone.addEventListener('click', ()=>fileInput.click());
+dropzone.addEventListener('dragover', e=>{e.preventDefault();dropzone.classList.add('dragover');});
+dropzone.addEventListener('dragleave', ()=>dropzone.classList.remove('dragover'));
+dropzone.addEventListener('drop', e=>{e.preventDefault();dropzone.classList.remove('dragover');handleFile(e.dataTransfer.files[0]);});
+fileInput.addEventListener('change', e=>handleFile(e.target.files[0]));
+
+function handleFile(file) {
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parsed = parseOUSL(e.target.result);
+      if(!parsed.length) throw new Error('No courses found.');
+      state.allCourses = parsed;
+      document.getElementById('drop-label').textContent = file.name;
+      document.getElementById('file-status').innerHTML = `<span class="ok">✅ ${parsed.length} courses loaded successfully</span>`;
+
+      document.getElementById('div-exclude').classList.remove('flow-hidden');
+      document.getElementById('wrap-exclude').classList.remove('flow-hidden');
+      setTimeout(() => document.getElementById('wrap-exclude').scrollIntoView({behavior: 'smooth', block: 'center'}), 100);
+    } catch(err) {
+      document.getElementById('file-status').innerHTML = `<span class="err">⚠️ ${err.message}</span>`;
+    }
+  };
+  reader.readAsText(file);
+}
+
+function parseOUSL(html) {
+  const doc = new DOMParser().parseFromString(html,'text/html');
+  const rows = doc.querySelectorAll('tr');
+  const courses = [];
+  rows.forEach(row=>{
+    const cols=[...row.querySelectorAll('td')].map(td=>td.textContent.trim());
+    if(cols.length>=5 && cols[0]!=='Course Code') courses.push({code:cols[0],name:cols[1],year:cols[2],status:cols[3],grade:cols[4]});
+  });
+  return courses;
+}
+
+// HELPERS
+function getExcluded() { return document.getElementById('exclude-input').value.split(',').map(s=>s.trim().toUpperCase()).filter(Boolean); }
+function getCredits(code) { return (code&&code.length>=5&&!isNaN(code[4])) ? parseInt(code[4]) : null; }
+function getLevel(code) { return (code&&code.length>=4&&!isNaN(code[3])) ? parseInt(code[3]) : null; }
+function getDegreeClass(gpa) { return DEGREE_CLASSES.find(c=>gpa>=c.minGPA) || DEGREE_CLASSES[DEGREE_CLASSES.length-1]; }
+function gradeColor(grade) {
+  const g = GPV[grade]??0;
+  if(g>=3.7) return {color:'#22543D',bg:'#C6F6D5'};
+  if(g>=3.0) return {color:'#744210',bg:'#FEEBC8'};
+  if(g>=2.0) return {color:'#2A4365',bg:'#BEE3F8'};
+  return {color:'#742A2A',bg:'#FED7D7'};
+}
+function gpvMeetsGrade(gpv, grade) { return gpv >= (GPV[grade]??0); }
+function effectiveCredit(credits, level, degType) {
+  if(degType!=='honours') return credits;
+  return (level>=5) ? credits*3 : credits*2;
+}
+
+// COLLAPSE TOGGLE HELPER
+function toggleCollapse(className, btn, totalCount, itemType) {
+  const items = document.querySelectorAll('.' + className);
+  const isExpanded = btn.classList.contains('expanded');
+
+  if(isExpanded) {
+    items.forEach(el => el.classList.add('collapsed-item'));
+    btn.classList.remove('expanded');
+    btn.innerHTML = `Show All ${totalCount} ${itemType} ↓`;
+  } else {
+    items.forEach(el => el.classList.remove('collapsed-item'));
+    btn.classList.add('expanded');
+    btn.innerHTML = `Show Less ↑`;
+  }
+}
+
+// ── CORE LOGIC ──
+function calculateBase() {
+  const excluded = getExcluded();
+  const included=[], skipped=[];
+
+  state.allCourses.forEach(c=>{
+    const code = c.code.toUpperCase();
+    if(excluded.includes(code)){skipped.push({...c,reason:'Excluded'});return;}
+    if(c.status==='Eligible'||c.status==='Pending'||c.grade==='-'){
+      skipped.push({...c,reason:'Not completed yet'});
+      return;
+    }
+    if(!(c.grade in GPV)){skipped.push({...c,reason:'Ungraded'});return;}
+    const cr=getCredits(c.code);
+    if(!cr){skipped.push({...c,reason:'No credits parsed'});return;}
+    included.push({...c,credits:cr,gpv:GPV[c.grade],level:getLevel(c.code)});
+  });
+
+  included.forEach(c=>{
+    c.effCredit = effectiveCredit(c.credits, c.level, state.degreeType);
+    c.weighted = c.effCredit * c.gpv;
+  });
+
+  const totalEffCredits = included.reduce((s,c)=>s+c.effCredit,0);
+  const totalWeighted   = included.reduce((s,c)=>s+c.weighted,0);
+  const totalRealCredits= included.reduce((s,c)=>s+c.credits,0);
+  const gpa = totalEffCredits>0 ? totalWeighted/totalEffCredits : 0;
+
+  const levels={}, gradeDist={};
+  included.forEach(c=>{
+    if(c.level) {
+      if(!levels[c.level]) levels[c.level]={weighted:0,effCredits:0,realCredits:0,courses:[]};
+      levels[c.level].weighted += c.weighted;
+      levels[c.level].effCredits += c.effCredit;
+      levels[c.level].realCredits += c.credits;
+      levels[c.level].courses.push(c);
+    }
+    gradeDist[c.grade] = (gradeDist[c.grade]||0) + c.credits;
+  });
+
+  const levelGPA = Object.entries(levels)
+    .map(([l,d])=>({level:parseInt(l),gpa:d.effCredits>0?d.weighted/d.effCredits:0,realCredits:d.realCredits,courses:d.courses}))
+    .sort((a,b)=>a.level-b.level);
+
+  state.baseData = {gpa,totalEffCredits,totalWeighted,totalRealCredits,included,skipped,levelGPA,gradeDist};
+
+  renderBaseReport();
+  buildWhatIfSection();
+
+  document.getElementById('card-report').classList.remove('flow-hidden');
+  document.getElementById('card-whatif').classList.remove('flow-hidden');
+
+  setTimeout(() => document.getElementById('card-report').scrollIntoView({behavior: 'smooth', block: 'start'}), 100);
+}
+
+// RENDER BASE REPORT
+function renderBaseReport() {
+  const data = state.baseData;
+  const cls = getDegreeClass(data.gpa);
+  const degCrit = CRITERIA[state.degreeType];
+
+  document.getElementById('summary-title').textContent = state.degreeType==='general' ? 'Current General Degree GPA' : 'Current Honours Degree GPA';
+
+  const gpaEl = document.getElementById('gpa-number');
+  gpaEl.style.color = cls.color;
+  animCount(gpaEl, parseFloat(gpaEl.textContent)||0, data.gpa, 800);
+
+  const badge = document.getElementById('degree-badge');
+  badge.textContent=cls.label;
+  badge.style.color=cls.color; badge.style.background=cls.bg;
+
+  const totalTarget = degCrit.totalCredits;
+  const pct = Math.min(Math.round(data.totalRealCredits/totalTarget*100),100);
+  document.getElementById('stat-row').innerHTML=`
+    <div class="stat"><div class="stat-val">${data.totalRealCredits} <span style="font-size:16px;color:var(--muted)">/ ${totalTarget}</span></div><div class="stat-lbl">Credits Counted</div></div>
+    <div class="stat ${pct>=100?'good':'warn'}"><div class="stat-val">${pct}%</div><div class="stat-lbl">Progress</div></div>
+    <div class="stat"><div class="stat-val">${data.included.length}</div><div class="stat-lbl">Courses Included</div></div>
+  `;
+
+  renderClassification(data.gpa, cls, degCrit);
+  renderCreditProgress(data.totalRealCredits, data.levelGPA, degCrit);
+  renderCriteria(data.gpa, cls, degCrit, data.gradeDist, data.included);
+  renderCourseTables(data.included, data.skipped);
+}
+
+function renderClassification(gpa, activeCls, degCrit) {
+  const scale = document.getElementById('cls-scale');
+  scale.innerHTML='';
+  degCrit.classes.forEach(c=>{
+    const active = activeCls.label===c.label;
+    const dc = DEGREE_CLASSES.find(d=>d.label===c.label)||DEGREE_CLASSES[4];
+    const row=document.createElement('div');
+    row.className='cls-row'+(active?' active':'');
+    if(active){row.style.background=dc.bg; row.style.borderColor=dc.color+'40';}
+    row.innerHTML=`
+      <div><div class="cls-name" style="color:${active?dc.color:''};">${active?'▶ ':''}${c.label}</div><div class="cls-reqs">${c.extraLabel}</div></div>
+      <div class="cls-min">≥ ${c.minGPA.toFixed(2)}</div>`;
+    scale.appendChild(row);
+  });
+
+  const barsEl=document.getElementById('level-bars');
+  barsEl.innerHTML='';
+  state.baseData.levelGPA.forEach(l=>{
+    const lc=getDegreeClass(l.gpa);
+    const pct=(l.gpa/4)*100;
+    barsEl.innerHTML+=`
+      <div class="prog-wrap">
+        <div class="prog-header"><span class="prog-label">Level ${l.level}</span><span class="prog-val" style="color:${lc.color}">${l.gpa.toFixed(2)}</span></div>
+        <div class="prog-track"><div class="prog-fill" data-pct="${pct}" style="background:${lc.color}"></div></div>
+      </div>`;
+  });
+  setTimeout(animateBars, 100);
+}
+
+function renderCreditProgress(totalReal, levelGPA, degCrit) {
+  let html='';
+  Object.entries(degCrit.levelCredits).forEach(([lvl,target])=>{
+    const found=levelGPA.find(l=>l.level===parseInt(lvl));
+    const actual=found?found.realCredits:0;
+    const pct=Math.min((actual/target)*100,100);
+    const col=actual>=target?'var(--green)':actual>0?'var(--gold)':'var(--border)';
+    html+=`
+      <div class="prog-wrap">
+        <div class="prog-header"><span class="prog-label">Level ${lvl} Credits</span><span class="prog-val">${actual}/${target} ${actual>=target?'✅':''}</span></div>
+        <div class="prog-track"><div class="prog-fill" data-pct="${pct}" style="background:${col}"></div></div>
+      </div>`;
+  });
+  document.getElementById('credit-progress').innerHTML=html;
+}
+
+function renderCriteria(gpa, activeCls, degCrit, gradeDist, included) {
+  let html='';
+  degCrit.classes.forEach(c=>{
+    const dc=DEGREE_CLASSES.find(d=>d.label===c.label)||DEGREE_CLASSES[4];
+    const isActive=activeCls.label===c.label;
+    html+=`<div style="margin-bottom:28px;">
+      <h4 style="color:${dc.color};margin-bottom:12px;border-bottom:1px solid ${dc.color}30;padding-bottom:8px;">${isActive?'▶ ':''}${c.label}</h4>
+      <div class="criteria-grid">`;
+
+    const gpaPass = gpa>=c.minGPA;
+    html+=`<div class="crit-item ${gpaPass?'pass':'fail'}"><div class="crit-icon">${gpaPass?'✅':'❌'}</div><div class="crit-text"><span class="crit-title">GPA Req</span><span class="crit-detail">Need ≥ ${c.minGPA.toFixed(2)} · You: ${gpa.toFixed(2)}</span></div></div>`;
+
+    if(c.gradeReq) {
+      const req=c.gradeReq;
+      const qualCredits=Object.entries(gradeDist).filter(([g])=>gpvMeetsGrade(GPV[g]??0,req.grade)).reduce((s,[,cr])=>s+cr,0);
+      let l56note='', gradePass=qualCredits>=req.credits;
+      if(req.l56credits) {
+        const l56q=included.filter(c2=>(c2.level===5||c2.level===6)&&gpvMeetsGrade(c2.gpv,req.grade)).reduce((s,c2)=>s+c2.credits,0);
+        l56note=` · L5/L6: ${l56q}/${req.l56credits}`;
+        if(l56q<req.l56credits) gradePass=false;
+      }
+      html+=`<div class="crit-item ${gradePass?'pass':'fail'}"><div class="crit-icon">${gradePass?'✅':'❌'}</div><div class="crit-text"><span class="crit-title">Grades</span><span class="crit-detail">${req.grade}+ in ≥${req.credits}cr · You: ${qualCredits}cr${l56note}</span></div></div>`;
+    }
+
+    const totalTarget=degCrit.totalCredits;
+    const credPass=included.reduce((s,c2)=>s+c2.credits,0)>=totalTarget;
+    html+=`<div class="crit-item ${credPass?'pass':included.length>0?'pending':'fail'}"><div class="crit-icon">${credPass?'✅':'⏳'}</div><div class="crit-text"><span class="crit-title">Credits</span><span class="crit-detail">Need ${totalTarget} · You: ${included.reduce((s,c2)=>s+c2.credits,0)}</span></div></div>`;
+
+    html+='</div></div>';
+  });
+  document.getElementById('criteria-content').innerHTML=html;
+}
+
+function renderCourseTables(included, skipped) {
+  // Included
+  document.getElementById('inc-title').textContent=`Included Courses (${included.length})`;
+  document.getElementById('inc-tbody').innerHTML=included.map((c, i)=>{
+    const gc=gradeColor(c.grade);
+    const hidden = i >= RENDER_LIMIT ? 'col-inc collapsed-item' : '';
+    return `<tr class="${hidden}">
+      <td class="code">${c.code}</td><td>${c.name}</td><td class="center">${c.level||'?'}</td>
+      <td><span class="grade-chip" style="color:${gc.color};background:${gc.bg}">${c.grade}</span></td>
+      <td class="center">${c.credits}</td><td class="center mono">${c.gpv.toFixed(2)}</td><td class="center mono">${c.weighted.toFixed(2)}</td>
+    </tr>`;
+  }).join('');
+
+  if(included.length > RENDER_LIMIT) {
+    document.getElementById('inc-toggle-area').innerHTML = `<button class="toggle-view-btn" onclick="toggleCollapse('col-inc', this, ${included.length}, 'Courses')">Show All ${included.length} Courses ↓</button>`;
+  } else {
+    document.getElementById('inc-toggle-area').innerHTML = '';
+  }
+
+  // Skipped
+  const skipSec=document.getElementById('skip-section');
+  if(skipped.length){
+    skipSec.style.display='block';
+    document.getElementById('skip-title').textContent=`Skipped Courses (${skipped.length})`;
+    document.getElementById('skip-tbody').innerHTML=skipped.map((c, i)=>{
+      const hidden = i >= RENDER_LIMIT ? 'col-skip collapsed-item' : '';
+      return `<tr class="${hidden}"><td class="code">${c.code}</td><td>${c.name}</td><td class="mono muted">${c.grade}</td><td class="muted">${c.reason}</td></tr>`;
+    }).join('');
+
+    if(skipped.length > RENDER_LIMIT) {
+      document.getElementById('skip-toggle-area').innerHTML = `<button class="toggle-view-btn" onclick="toggleCollapse('col-skip', this, ${skipped.length}, 'Skipped Courses')">Show All ${skipped.length} Skipped Courses ↓</button>`;
+    } else {
+      document.getElementById('skip-toggle-area').innerHTML = '';
+    }
+  } else {
+    skipSec.style.display='none';
+  }
+}
+
+// ── WHAT IF / PROJECTIONS LOGIC ──
+function buildWhatIfSection() {
+  const excluded = getExcluded();
+  const incomplete = state.allCourses.filter(c=> !excluded.includes(c.code.toUpperCase()) && (c.status==='Eligible'||c.status==='Pending'||c.grade==='-') );
+
+  const container = document.getElementById('incomplete-list');
+  const toggleArea = document.getElementById('whatif-toggle-area');
+
+  if(!incomplete.length) {
+    container.innerHTML='<div class="info-box" style="background:#F0FFF4; border-color:#C6F6D5; color:var(--green);">✅ All your registered courses are fully completed. No projections needed!</div>';
+    document.getElementById('whatif-result-area').classList.add('flow-hidden');
+    toggleArea.innerHTML = '';
+    return;
+  }
+
+  let html = '<div class="whatif-grid">';
+  incomplete.forEach((c, i)=>{
+    const hidden = i >= RENDER_LIMIT ? 'col-whatif collapsed-item' : '';
+    html += `<div class="whatif-course ${hidden}">
+      <div class="whatif-code">${c.code} · L${getLevel(c.code)||'?'} · ${getCredits(c.code)||'?'}cr</div>
+      <div class="whatif-name">${c.name}</div>
+      <select class="whatif-select" data-code="${c.code}" onchange="calculateProjected()">
+        <option value="">— Hypothesize —</option>
+        ${GRADE_ORDER.map(g=>`<option value="${g}">${g}</option>`).join('')}
+      </select>
+    </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+
+  if(incomplete.length > RENDER_LIMIT) {
+    toggleArea.innerHTML = `<button class="toggle-view-btn" onclick="toggleCollapse('col-whatif', this, ${incomplete.length}, 'Remaining Courses')">Show All ${incomplete.length} Remaining Courses ↓</button>`;
+  } else {
+    toggleArea.innerHTML = '';
+  }
+
+  document.getElementById('whatif-result-area').classList.add('flow-hidden');
+}
+
+function calculateProjected() {
+  const data = state.baseData;
+  if(!data) return;
+
+  const selects = document.querySelectorAll('.whatif-select');
+  let newEff = data.totalEffCredits;
+  let newW = data.totalWeighted;
+  let addedAny = false;
+
+  selects.forEach(s=>{
+    if(!s.value) return;
+    addedAny = true;
+    const credits = getCredits(s.dataset.code);
+    const level = getLevel(s.dataset.code);
+    const gpv = GPV[s.value];
+    const eff = effectiveCredit(credits, level, state.degreeType);
+    newEff += eff;
+    newW += eff * gpv;
+  });
+
+  const resArea = document.getElementById('whatif-result-area');
+  if(!addedAny) {
+    resArea.classList.add('flow-hidden');
+    return;
+  }
+
+  const projGPA = newEff > 0 ? newW / newEff : 0;
+  const cls = getDegreeClass(projGPA);
+  const delta = projGPA - data.gpa;
+
+  resArea.classList.remove('flow-hidden');
+
+  const gpaEl = document.getElementById('proj-gpa-number');
+  animCount(gpaEl, parseFloat(gpaEl.textContent)||data.gpa, projGPA, 400);
+
+  const badge = document.getElementById('proj-badge');
+  badge.textContent = cls.label;
+  badge.style.color = cls.color; badge.style.background = cls.bg;
+
+  const dEl = document.getElementById('proj-delta');
+  if(delta > 0) {
+    dEl.textContent = `▲ +${delta.toFixed(3)} increase`;
+    dEl.style.color = 'var(--green)';
+  } else if (delta < 0) {
+    dEl.textContent = `▼ ${delta.toFixed(3)} decrease`;
+    dEl.style.color = 'var(--red)';
+  } else {
+    dEl.textContent = `No change to GPA`;
+    dEl.style.color = 'var(--muted)';
+  }
+}
+
+function calcTarget() {
+  const targetGPA = parseFloat(document.getElementById('target-class').value);
+  const data = state.baseData;
+  if(!data) return;
+
+  const excluded = getExcluded();
+  const incomplete = state.allCourses.filter(c=> !excluded.includes(c.code.toUpperCase()) && (c.status==='Eligible'||c.status==='Pending'||c.grade==='-') );
+
+  const remainingEff = incomplete.reduce((s,c)=>{
+    const cr = getCredits(c.code);
+    return cr ? s + effectiveCredit(cr, getLevel(c.code), state.degreeType) : s;
+  }, 0);
+
+  if(remainingEff === 0){
+    document.getElementById('target-result').innerHTML=`<div class="info-box">You have no remaining courses to factor in!</div>`;
+    return;
+  }
+
+  const neededW = targetGPA * (data.totalEffCredits + remainingEff) - data.totalWeighted;
+  const neededAvgGPV = neededW / remainingEff;
+
+  let html=`<div style="background:var(--card-bg); border:1px solid var(--border); border-radius:8px; padding:24px; margin-top:16px; box-shadow:var(--shadow-sm);">`;
+
+  if(neededAvgGPV <= 0) {
+    html+=`<p style="color:var(--green); font-size:16px; font-weight:600;">🎉 Secured!</p><p style="color:var(--muted);margin-top:4px;">You've already locked in this class. Even if you bomb the remaining courses, your GPA won't drop below ${targetGPA.toFixed(2)}.</p>`;
+  } else if(neededAvgGPV > 4.0) {
+    html+=`<p style="color:var(--red); font-size:16px; font-weight:600;">⚠️ Mathematically impossible.</p><p style="color:var(--muted);margin-top:4px;">Even if you pull straight A+ grades across all remaining courses, you won't reach ${targetGPA.toFixed(2)}.</p>`;
+  } else {
+    const closestGrade = GRADE_ORDER.slice().reverse().find(g=>GPV[g]>=neededAvgGPV) || 'A+';
+    html+=`
+      <div style="display:flex; align-items:center; gap:16px;">
+        <div style="font-size:32px; font-weight:700; color:var(--maroon); font-family:'Courier Prime',monospace;">${closestGrade}</div>
+        <div>
+          <p style="font-size:14px; font-weight:500;">You need an average GPV of <strong>${neededAvgGPV.toFixed(2)}</strong> across all remaining courses.</p>
+          <p style="color:var(--muted); font-size:13px; margin-top:4px;">That basically means you need to average a ${closestGrade} to clutch the degree class.</p>
+        </div>
+      </div>
+    `;
+  }
+  html+='</div>';
+  document.getElementById('target-result').innerHTML=html;
+}
+
+// ── PDF EXPORT LOGIC (Firefox local fix: use native print) ──
+function expandAllCollapsedForPrint() {
+  const expandBtns = document.querySelectorAll('.toggle-view-btn:not(.expanded)');
+  expandBtns.forEach(btn => btn.click());
+}
+
+async function exportPDF() {
+  // Make sure the report exists/visible
+  const report = document.getElementById('card-report');
+  if (report.classList.contains('flow-hidden')) {
+    alert('Generate the report first (Analyze My Results).');
+    return;
+  }
+
+  // Expand tables so they print fully
+  expandAllCollapsedForPrint();
+
+  // Give the browser a moment to reflow before print
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+  // Native print -> user chooses "Save to PDF" (works in Firefox local mode)
+  window.print();
+}
+
+// UTILS
+function animateBars() {
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    document.querySelectorAll('.prog-fill').forEach(el=>{ el.style.width=(el.dataset.pct||0)+'%'; });
+  }));
+}
+
+function animCount(el, from, to, dur) {
+  const start=performance.now();
+  (function step(now){
+    const t=Math.min((now-start)/dur,1);
+    const e=t<.5?2*t*t:-1+(4-2*t)*t;
+    el.textContent=(from+(to-from)*e).toFixed(2);
+    if(t<1) requestAnimationFrame(step);
+  })(performance.now());
+}
+
+document.getElementById('exclude-input').addEventListener('input', ()=>{
+  if(state.allCourses.length) calculateBase();
+});
+</script>
+</body>
+</html>
