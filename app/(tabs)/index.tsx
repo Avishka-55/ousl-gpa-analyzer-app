@@ -1,5 +1,6 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as XLSX from 'xlsx';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -84,25 +85,42 @@ export default function HomeScreen() {
     }
 
     try {
-      const html = await FileSystem.readAsStringAsync(picked.uri);
       const lowerName = (picked.name ?? '').toLowerCase();
+      let parsed: CourseRecord[];
 
-      if (!looksLikeHtml(html)) {
-        const looksLikeExcel =
-          lowerName.endsWith('.xls') ||
-          lowerName.endsWith('.xlsx') ||
-          picked.mimeType?.includes('excel');
+      if (lowerName.endsWith('.xlsx')) {
+        const binary = await FileSystem.readAsStringAsync(picked.uri, { encoding: FileSystem.EncodingType.Base64 });
+        const workbook = XLSX.read(binary, { type: 'base64' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as unknown as string[][];
+        
+        parsed = jsonData.slice(1).map(row => ({
+          code: row[0] ?? '',
+          name: row[1] ?? '',
+          year: row[2] ?? '',
+          status: row[3] ?? '',
+          grade: row[4] ?? '',
+        })).filter(row => row.code && row.grade);
+      } else {
+        const html = await FileSystem.readAsStringAsync(picked.uri);
 
-        if (looksLikeExcel) {
-          throw new Error(
-            'This file is a binary Excel workbook. Please upload the HTML result export from myOUSL (or an .xls that opens as HTML).'
-          );
+        if (!looksLikeHtml(html)) {
+          const looksLikeExcel =
+            lowerName.endsWith('.xls') ||
+            picked.mimeType?.includes('excel');
+
+          if (looksLikeExcel) {
+            throw new Error(
+              'This file is a binary Excel workbook. Please upload the HTML result export from myOUSL (or an .xls that opens as HTML).'
+            );
+          }
+
+          throw new Error('Unsupported file format. Please upload the myOUSL HTML result sheet.');
         }
 
-        throw new Error('Unsupported file format. Please upload the myOUSL HTML result sheet.');
+        parsed = parseOUSLResultSheet(html);
       }
-
-      const parsed = parseOUSLResultSheet(html);
 
       if (!parsed.length) {
         throw new Error('No course rows found in this file.');
