@@ -31,7 +31,7 @@ export function UploadPanel({
 
       <Pressable style={styles.fileDrop} onPress={onPickFile}>
         <Text style={styles.fileIcon}>📄</Text>
-        <Text style={styles.fileLabel}>{selectedFileName ?? 'Tap to choose .xls or .html file'}</Text>
+        <Text style={styles.fileLabel}>{selectedFileName ?? 'Tap to choose .xls, .xlsx or .html file'}</Text>
         <Text style={styles.fileHint}>Supports portal export files</Text>
       </Pressable>
 

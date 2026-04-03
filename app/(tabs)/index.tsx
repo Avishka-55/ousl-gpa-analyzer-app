@@ -69,7 +69,7 @@ export default function HomeScreen() {
 
   async function pickFile() {
     const result = await DocumentPicker.getDocumentAsync({
-      type: ['text/html', 'application/vnd.ms-excel'],
+      type: ['text/html', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
       copyToCacheDirectory: true,
       multiple: false,
     });
