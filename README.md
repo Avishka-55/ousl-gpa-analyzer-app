@@ -16,13 +16,11 @@ The app lets users upload a result sheet export, calculate GPA/class standing, r
 
 ## Important File Format Note
 
-The parser expects HTML table content.
+The parser accepts either HTML table content or a true Excel workbook export.
 
 - Supported: HTML result export (`.html`) from myOUSL
-- Sometimes supported: `.xls` files that actually contain HTML
-- Not supported directly: true binary Excel workbooks (`.xls` / `.xlsx`)
-
-If you upload a binary Excel workbook, the app will show a clear validation error.
+- Supported: Excel workbooks (`.xls` and `.xlsx`)
+- Also supported: `.xls` files that actually contain HTML
 
 ## Tech Stack
 

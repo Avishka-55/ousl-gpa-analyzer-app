@@ -1,9 +1,9 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
-import * as XLSX from 'xlsx';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as XLSX from 'xlsx';
 
 import { CourseList } from '@/components/gpa/course-list';
 import { DegreeToggle } from '@/components/gpa/degree-toggle';
@@ -21,7 +21,7 @@ import {
     parseExclusions,
 } from '@/features/gpa/calculations';
 import { CRITERIA, DEFAULT_EXCLUSIONS, GRADE_ORDER } from '@/features/gpa/constants';
-import { parseOUSLResultSheet } from '@/features/gpa/parser';
+import { parseOUSLResultSheet, parseOUSLResultWorkbook } from '@/features/gpa/parser';
 import { BaseData, CourseRecord, DegreeType, TargetResult } from '@/features/gpa/types';
 
 const TARGET_OPTIONS = [
@@ -86,36 +86,36 @@ export default function HomeScreen() {
 
     try {
       const lowerName = (picked.name ?? '').toLowerCase();
+      const looksLikeSpreadsheet =
+        lowerName.endsWith('.xlsx') ||
+        lowerName.endsWith('.xls') ||
+        picked.mimeType?.includes('excel') ||
+        picked.mimeType?.includes('spreadsheetml');
+
       let parsed: CourseRecord[];
 
-      if (lowerName.endsWith('.xlsx')) {
+      if (looksLikeSpreadsheet) {
         const binary = await FileSystem.readAsStringAsync(picked.uri, { encoding: FileSystem.EncodingType.Base64 });
-        const workbook = XLSX.read(binary, { type: 'base64' });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as unknown as string[][];
-        
-        parsed = jsonData.slice(1).map(row => ({
-          code: row[0] ?? '',
-          name: row[1] ?? '',
-          year: row[2] ?? '',
-          status: row[3] ?? '',
-          grade: row[4] ?? '',
-        })).filter(row => row.code && row.grade);
+
+        try {
+          const workbook = XLSX.read(binary, { type: 'base64' });
+          parsed = parseOUSLResultWorkbook(workbook);
+        } catch {
+          parsed = [];
+        }
+
+        if (!parsed.length) {
+          const fallbackText = await FileSystem.readAsStringAsync(picked.uri);
+          if (!looksLikeHtml(fallbackText)) {
+            throw new Error('This file does not look like a supported myOUSL export. Please upload the HTML sheet or an Excel workbook.');
+          }
+
+          parsed = parseOUSLResultSheet(fallbackText);
+        }
       } else {
         const html = await FileSystem.readAsStringAsync(picked.uri);
 
         if (!looksLikeHtml(html)) {
-          const looksLikeExcel =
-            lowerName.endsWith('.xls') ||
-            picked.mimeType?.includes('excel');
-
-          if (looksLikeExcel) {
-            throw new Error(
-              'This file is a binary Excel workbook. Please upload the HTML result export from myOUSL (or an .xls that opens as HTML).'
-            );
-          }
-
           throw new Error('Unsupported file format. Please upload the myOUSL HTML result sheet.');
         }
 
